@@ -14,7 +14,6 @@ import (
 const baseURL = "https://discord.com/api/webhooks"
 
 var lastRequest time.Time
-var rateLimit = 30 * time.Second
 var rateLimitResponse = []string{
 	"Whoa there, speed racer! Let's take a breather and try again in a bit.",
 	"Oops, looks like you've hit the fun limit! Come back later for more.",
@@ -44,6 +43,16 @@ func main() {
 }
 
 func sendToWebhook(w http.ResponseWriter, r *http.Request) {
+	rl := r.URL.Query().Get("rl")
+	rateLimit := 0 * time.Second
+	if rl != "" {
+		rateLimitDuration, err := time.ParseDuration(rl)
+		if err != nil {
+			http.Error(w, "Invalid rate limit duration", http.StatusBadRequest)
+			return
+		}
+		rateLimit = rateLimitDuration
+	}
 	if time.Since(lastRequest) < rateLimit {
 		randomString := rateLimitResponse[rand.Intn(len(rateLimitResponse))]
 		http.Error(w, randomString, http.StatusTooManyRequests)
